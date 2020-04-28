@@ -1,7 +1,7 @@
 # Project Information
 
 **Parsing Patient Data from dicom**
-*Files in local*
+*Files in rivanna*
 - run_pipeline.slurm
 	- Runs the entire pipeline from start to finish on list of patients in a given patient directory specified in the file.
 - lymphkill/structure_loading.py
