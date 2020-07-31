@@ -2,6 +2,7 @@ import os
 import pickle
 import argparse
 import pydicom
+import nrrd
 import numpy as np
 from scipy import ndimage
 
@@ -87,6 +88,18 @@ def print_mask(mask):
 		if isinstance(mask[key], np.ndarray) or key == 'Name':
 			continue
 		print('  %15s:\t%g' % (key, mask[key]))
+
+
+'''
+Write a mask in NRRD format
+Parameters:
+	mask - a mask dictinoary whose keys are Name and Mask
+	directory - where to write the mask
+'''
+def write_mask(mask, directory):
+	filename = os.path.join(directory, mask['Name']+'.nrrd')
+	print('Writing ' + filename)
+	nrrd.write(filename, 1*mask['Mask'])
 
 '''
 Generate a masks structure given a set of contours and information about the dose files
@@ -187,6 +200,15 @@ if __name__=='__main__':
 		print('Could not load in ct/dose info')
 		exit(0)
 
+	# Dump masks as pickle
 	masks = mask_generation(contours, ct_infos)
 	with open(os.path.join(args.directory, 'masks_in_CT_dimensions.pickle'), 'wb') as outfile:
 		pickle.dump(masks, outfile)
+
+	# Write masks as NRRD for pyradiomics
+	mask_directory = os.path.join(args.directory, 'masks')
+	if (not(os.path.exists(mask_directory))):
+		print('Creating directory ' + mask_directory)
+		os.mkdir(mask_directory)
+	for mask in masks:
+		write_mask(mask, mask_directory)
