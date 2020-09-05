@@ -9,48 +9,6 @@ import nrrd
 from lymphkill.file_utils import find_prefixed_file, find_dicom_directory, find_prefixed_files, load_rtdose_files
 from calc_blood_dose import *
 
-basic_mask_dicts = [
-	{'NameStrings': ['other', 'organs'], 'GV': False, 'Stationary': False, 'CardiacOutput': -1},
-	{'NameStrings': ['lung', 'total'], 'GV': False, 'Stationary': False, 'CardiacOutput': 0.025},
-	{'NameStrings': ['aorta'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
-	{'NameStrings': ['pa'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
-	{'NameStrings': ['vc'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
-	{'NameStrings': ['thoracic', 'spine'], 'GV': False, 'Stationary': True, 'CardiacOutput': 0.},
-	{'NameStrings': ['Heart'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['Heart','AV'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['pa','av'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['vc', 'av'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['aorta', 'av'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['Great','Vessels'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
-	{'NameStrings': ['Chestwall'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
-	{'NameStrings': ['Lung','Lt'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.012},
-	{'NameStrings': ['Lung','Rt'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.012},
-	{'NameStrings': ['cord'], 'GV':False, 'Stationary': True, 'CardiacOutput':0.},
-	{'NameStrings': ['brachial', 'plexus'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
-	{'NameStrings': ['T10'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
-	{'NameStrings': ['T5'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},	
-]
-
-'''
-Find the index for a given organ in the contours structure
-Parameters:
-	contours - The contours structure to look in
-	name_strings - A list of strings which must appear in the name (lowercase)
-Returns:
-	The index of the matching contour in the structure
-'''
-def find_matching_contour_idx(contours, name_strings):
-	for i, nm in enumerate(contours['ROIName']):
-		lnm = nm.lower()
-		found = True
-		for j in name_strings:
-			if not j.lower() in lnm:
-				found = False
-		if found:
-			return i
-	
-	return -1
-
 '''
 Get grids for converting between the CT image dimensions and the dose file dimensions
 Parameters:
@@ -83,11 +41,9 @@ def get_conversion_grids(ct_info, dose_info, dim_vol, dim_dos):
 	# for each of the 512x512x110 voxels of the CT image
 	#
 	# If the original mask generation script is to be believed, we have the following:
-	#	posd[:,:,:,0] contains the dose-grid y coordinates of each voxel
-	#	posd[:,:,:,1] contains the dose-grid x coordinates of each voxel
+	#	posd[:,:,:,0] contains the dose-grid x coordinates of each voxel
+	#	posd[:,:,:,1] contains the dose-grid y coordinates of each voxel
 	#	posd[:,:,:,2] contains the dose-grid z coordinates of each voxel
-	#
-	# I'm not sure why the x and y need to be flipped.
 	posd = (corner_v - corner_d + xyz * dim_voxv) / dim_voxd
 	posd = posd.astype(int)
 
@@ -98,18 +54,6 @@ def get_conversion_grids(ct_info, dose_info, dim_vol, dim_dos):
 	valid_voxel = np.logical_and(valid_voxel, posd[:,:,:,2] < dim_dos[2])
 
 	return posv[valid_voxel], posd[valid_voxel]
-
-'''
-Calculate the average layer size in the z-direction of a given mask
-Parameters:
-	mask - The boolean mask for an organ
-Returns:
-	The average number of True values in each Z-slice
-'''
-def layer_size(mask):
-	num = np.sum(mask, axis=(0, 1))
-	num = num[num > 0]
-	return np.sum(num) / len(num)
 
 '''
 Find the first CT frame in the z-direction
