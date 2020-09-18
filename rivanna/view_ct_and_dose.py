@@ -1,5 +1,5 @@
 import copy
-import argparse 
+import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
@@ -35,10 +35,12 @@ def redraw(i,j,k):
     axs[3].imshow(ct[:, j, :], cmap='bone')
     axs[6].imshow(ct[k, :, :].T, cmap='bone', origin='lower')
 
-    if args.mask is not None:
-        axs[2].imshow(mask[:, :, i], cmap=mask_cmap, alpha=mask_alpha)
-        axs[3].imshow(mask[:, j, :], cmap=mask_cmap, alpha=mask_alpha)
-        axs[6].imshow(mask[k, :, :].T, cmap=mask_cmap, alpha=mask_alpha, origin='lower')
+    if args.masks is not None:
+        mask_maxv = len(args.masks)
+        for n in range(len(args.masks)):
+            axs[2].imshow(masks[n][:, :, i],   cmap=mask_cmap, alpha=mask_alpha, vmin=0, vmax=mask_maxv)
+            axs[3].imshow(masks[n][:, j, :],   cmap=mask_cmap, alpha=mask_alpha, vmin=0, vmax=mask_maxv)
+            axs[6].imshow(masks[n][k, :, :].T, cmap=mask_cmap, alpha=mask_alpha, vmin=0, vmax=mask_maxv, origin='lower')
 
     # axs[2].imshow(dose[:, :, i], cmap=dose_cmap, alpha=dose_alpha)
     # axs[3].imshow(dose[:, j, :], cmap=dose_cmap, alpha=dose_alpha)
@@ -65,7 +67,7 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--image', type=str, help='image filename')
     parser.add_argument('--dose', type=str, help='dose filename')
-    parser.add_argument('--mask', type=str, help='mask filename')
+    parser.add_argument('--masks', type=str, help='mask filename', nargs='*')
     parser.add_argument('--dose_cmap', type=str, help='colormap to use for dose')
     parser.add_argument('--dose_alpha', type=str, help='dose alpha')
     parser.add_argument('--mask_alpha', type=str, help='mask alpha')
@@ -84,7 +86,7 @@ if __name__=='__main__':
     if args.mask_alpha is not None:
         mask_alpha = args.mask_alpha
     else:
-        mask_alpha = 0.6
+        mask_alpha = 1.0
 
     ct, ct_header = nrrd.read(args.image)
     ct_minv = ct.min()
@@ -99,12 +101,21 @@ if __name__=='__main__':
     # dose_cmap.set_bad(alpha=0)
     # dose = np.ma.masked_where(dose<dose_minv, dose)
 
-    if args.mask is not None:
-        mask, mask_header = nrrd.read(args.mask)
-        # Mask all the voxels equal to zero
-        mask_cmap = copy.copy(plt.cm.get_cmap('bwr_r'))
+    # Read in all the specified masks
+    # I assume that each mask consists of ones and zeros.
+    # To give each mask a unique color in the colormap,
+    # I multiply it by the length of the mask list.
+    if args.masks is not None:
+        # This will hide all the voxels equal to zero in each mask
+        mask_cmap = copy.copy(plt.cm.get_cmap('Set3'))
         mask_cmap.set_bad(alpha=0)
-        mask = np.ma.masked_where(mask<1, mask)
+
+        masks = []
+        for m in args.masks:
+            mask, mask_header = nrrd.read(m)
+            mask = mask * (len(masks)+1)
+            mask = np.ma.masked_where(mask<1, mask)
+            masks.append(mask)
 
     fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8)) = plt.subplots(2,4)
     plt.axis('off')
