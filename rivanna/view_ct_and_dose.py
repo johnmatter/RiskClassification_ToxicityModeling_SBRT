@@ -1,0 +1,133 @@
+import copy
+import argparse 
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider
+import nrrd
+
+# View the CT scan side-by-side with the dose overlaid on top.
+# the --image and --dose arguments are required.
+# You can specify an optional mask file that will be shown on top
+# of the CT but below the dose.
+#
+# usage: view_ct_and_dose.py [-h] [--image IMAGE] [--dose DOSE] [--mask MASK]
+#                            [--dose_cmap DOSE_CMAP] [--dose_alpha DOSE_ALPHA]
+#                            [--mask_alpha MASK_ALPHA]
+#
+# arguments:
+#   -h, --help            show this help message and exit
+#   --image IMAGE         image filename
+#   --dose DOSE           dose filename
+#   --mask MASK           mask filename
+#   --dose_cmap DOSE_CMAP
+#                         colormap to use for dose
+#   --dose_alpha DOSE_ALPHA
+#                         dose alpha
+#   --mask_alpha MASK_ALPHA
+#                         mask alpha
+
+def redraw(i,j,k):
+    axs[0].imshow(ct[:, :, i], cmap='bone')
+    axs[1].imshow(ct[:, j, :], cmap='bone')
+    axs[4].imshow(ct[k, :, :].T, cmap='bone', origin='lower')
+
+    axs[2].imshow(ct[:, :, i], cmap='bone')
+    axs[3].imshow(ct[:, j, :], cmap='bone')
+    axs[6].imshow(ct[k, :, :].T, cmap='bone', origin='lower')
+
+    if args.mask is not None:
+        axs[2].imshow(mask[:, :, i], cmap=mask_cmap, alpha=mask_alpha)
+        axs[3].imshow(mask[:, j, :], cmap=mask_cmap, alpha=mask_alpha)
+        axs[6].imshow(mask[k, :, :].T, cmap=mask_cmap, alpha=mask_alpha, origin='lower')
+
+    # axs[2].imshow(dose[:, :, i], cmap=dose_cmap, alpha=dose_alpha)
+    # axs[3].imshow(dose[:, j, :], cmap=dose_cmap, alpha=dose_alpha)
+    # axs[6].imshow(dose[k, :, :].T, cmap=dose_cmap, alpha=dose_alpha, origin='lower')
+
+    axs[2].imshow(dose[:, :, i], cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha)
+    axs[3].imshow(dose[:, j, :], cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha)
+    axs[6].imshow(dose[k, :, :].T, cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha, origin='lower')
+
+    axs[0].set_aspect(1.171875/1.171875)
+    axs[1].set_aspect(1.171875/3.000000)
+    axs[4].set_aspect(3.000000/1.171875)
+    axs[2].set_aspect(1.171875/1.171875)
+    axs[3].set_aspect(1.171875/3.000000)
+    axs[6].set_aspect(3.000000/1.171875)
+
+def update(val):
+    i = int(axialSlider.val)
+    j = int(sagittalSlider.val)
+    k = int(coronalSlider.val)
+    redraw(i,j,k)
+
+if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--image', type=str, help='image filename')
+    parser.add_argument('--dose', type=str, help='dose filename')
+    parser.add_argument('--mask', type=str, help='mask filename')
+    parser.add_argument('--dose_cmap', type=str, help='colormap to use for dose')
+    parser.add_argument('--dose_alpha', type=str, help='dose alpha')
+    parser.add_argument('--mask_alpha', type=str, help='mask alpha')
+    args = parser.parse_args()
+
+    if args.dose_cmap is not None:
+        dose_cmap = args.dose_cmap
+    else:
+        dose_cmap = 'magma'
+
+    if args.dose_alpha is not None:
+        dose_alpha = args.dose_alpha
+    else:
+        dose_alpha = 0.6
+
+    if args.mask_alpha is not None:
+        mask_alpha = args.mask_alpha
+    else:
+        mask_alpha = 0.6
+
+    ct, ct_header = nrrd.read(args.image)
+    ct_minv = ct.min()
+    ct_maxv = ct.max()
+
+    dose, dose_header = nrrd.read(args.dose)
+    dose_minv = np.min(dose[np.nonzero(dose)])
+    dose_maxv = dose.max()
+
+    # # Mask all the voxels with zero dose
+    # dose_cmap = copy.copy(plt.cm.get_cmap(dose_cmap))
+    # dose_cmap.set_bad(alpha=0)
+    # dose = np.ma.masked_where(dose<dose_minv, dose)
+
+    if args.mask is not None:
+        mask, mask_header = nrrd.read(args.mask)
+        # Mask all the voxels equal to zero
+        mask_cmap = copy.copy(plt.cm.get_cmap('bwr_r'))
+        mask_cmap.set_bad(alpha=0)
+        mask = np.ma.masked_where(mask<1, mask)
+
+    fig, ((ax1, ax2, ax3, ax4), (ax5, ax6, ax7, ax8)) = plt.subplots(2,4)
+    plt.axis('off')
+    plt.subplots_adjust(left=0.1, bottom=0.25, top=0.95)
+
+    axs = [ax1, ax2, ax3, ax4, ax5, ax6, ax7, ax8]
+    axs[5].axis('off')
+    axs[7].axis('off')
+
+    redraw(55,256,220)
+
+    # sliders for navigation
+    axcolor="lavender"
+    axAxial = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
+    axSagittal = plt.axes([0.25, 0.10, 0.65, 0.03], facecolor=axcolor)
+    axCoronal = plt.axes([0.25, 0.05, 0.65, 0.03], facecolor=axcolor)
+    axialSlider = Slider(axAxial, 'Axial', 0, 109, valinit=55, valstep=1)
+    sagittalSlider = Slider(axSagittal, 'Sagittal', 0, 511, valinit=256, valstep=1)
+    coronalSlider = Slider(axCoronal, 'Coronal', 0, 511, valinit=220, valstep=1)
+
+    coronalSlider.on_changed(update)
+    sagittalSlider.on_changed(update)
+    axialSlider.on_changed(update)
+
+    plt.show()
+
