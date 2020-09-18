@@ -10,15 +10,19 @@ import nrrd
 # You can specify an optional mask file that will be shown on top
 # of the CT but below the dose.
 #
-# usage: view_ct_and_dose.py [-h] [--image IMAGE] [--dose DOSE] [--mask MASK]
+# usage: view_ct_and_dose.py [-h] [--dose DOSE] [--masks [MASKS [MASKS ...]]]
 #                            [--dose_cmap DOSE_CMAP] [--dose_alpha DOSE_ALPHA]
 #                            [--mask_alpha MASK_ALPHA]
+#                            image
 #
-# arguments:
-#   -h, --help            show this help message and exit
-#   --image IMAGE         image filename
+# positional arguments:
+#   image                 image filename
+#
+#  optional arguments:
+#    -h, --help            show this help message and exit
 #   --dose DOSE           dose filename
-#   --mask MASK           mask filename
+#   --masks [MASKS [MASKS ...]]
+#                        mask filename
 #   --dose_cmap DOSE_CMAP
 #                         colormap to use for dose
 #   --dose_alpha DOSE_ALPHA
@@ -42,13 +46,17 @@ def redraw(i,j,k):
             axs[3].imshow(masks[n][:, j, :],   cmap=mask_cmap, alpha=mask_alpha, vmin=0, vmax=mask_maxv)
             axs[6].imshow(masks[n][k, :, :].T, cmap=mask_cmap, alpha=mask_alpha, vmin=0, vmax=mask_maxv, origin='lower')
 
-    # axs[2].imshow(dose[:, :, i], cmap=dose_cmap, alpha=dose_alpha)
-    # axs[3].imshow(dose[:, j, :], cmap=dose_cmap, alpha=dose_alpha)
-    # axs[6].imshow(dose[k, :, :].T, cmap=dose_cmap, alpha=dose_alpha, origin='lower')
+    if args.dose is not None:
+        # This will use the range in the entire dose image to set max/min for the colormap
+        axs[2].imshow(dose[:, :, i], cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha)
+        axs[3].imshow(dose[:, j, :], cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha)
+        axs[6].imshow(dose[k, :, :].T, cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha, origin='lower')
 
-    axs[2].imshow(dose[:, :, i], cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha)
-    axs[3].imshow(dose[:, j, :], cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha)
-    axs[6].imshow(dose[k, :, :].T, cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha, origin='lower')
+        # This will use the range in this slice to set max/min for the colormap
+        # axs[2].imshow(dose[:, :, i], cmap=dose_cmap, alpha=dose_alpha)
+        # axs[3].imshow(dose[:, j, :], cmap=dose_cmap, alpha=dose_alpha)
+        # axs[6].imshow(dose[k, :, :].T, cmap=dose_cmap, alpha=dose_alpha, origin='lower')
+
 
     axs[0].set_aspect(1.171875/1.171875)
     axs[1].set_aspect(1.171875/3.000000)
@@ -65,7 +73,7 @@ def update(val):
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--image', type=str, help='image filename')
+    parser.add_argument('image', type=str, help='image filename')
     parser.add_argument('--dose', type=str, help='dose filename')
     parser.add_argument('--masks', type=str, help='mask filename', nargs='*')
     parser.add_argument('--dose_cmap', type=str, help='colormap to use for dose')
@@ -92,14 +100,14 @@ if __name__=='__main__':
     ct_minv = ct.min()
     ct_maxv = ct.max()
 
-    dose, dose_header = nrrd.read(args.dose)
-    dose_minv = np.min(dose[np.nonzero(dose)])
-    dose_maxv = dose.max()
-
-    # # Mask all the voxels with zero dose
-    # dose_cmap = copy.copy(plt.cm.get_cmap(dose_cmap))
-    # dose_cmap.set_bad(alpha=0)
-    # dose = np.ma.masked_where(dose<dose_minv, dose)
+    if args.dose is not None:
+        dose, dose_header = nrrd.read(args.dose)
+        dose_minv = np.min(dose[np.nonzero(dose)])
+        dose_maxv = dose.max()
+        # # Mask all the voxels with zero dose
+        # dose_cmap = copy.copy(plt.cm.get_cmap(dose_cmap))
+        # dose_cmap.set_bad(alpha=0)
+        # dose = np.ma.masked_where(dose<dose_minv, dose)
 
     # Read in all the specified masks
     # I assume that each mask consists of ones and zeros.
