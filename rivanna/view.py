@@ -3,6 +3,7 @@ import argparse
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider
+from matplotlib.widgets import Button
 import nrrd
 
 # View the CT scan side-by-side with the dose overlaid on top.
@@ -65,11 +66,35 @@ def redraw(i,j,k):
     axs[3].set_aspect(1.171875/3.000000)
     axs[6].set_aspect(3.000000/1.171875)
 
-def update(val):
+def updateFromSlider(val):
     i = int(axialSlider.val)
     j = int(sagittalSlider.val)
     k = int(coronalSlider.val)
     redraw(i,j,k)
+
+def updateFromAxialUpButton(val):
+    i = int(axialSlider.val)
+    axialSlider.set_val(i+1)
+
+def updateFromSagittalUpButton(val):
+    i = int(sagittalSlider.val)
+    sagittalSlider.set_val(i+1)
+
+def updateFromCoronalUpButton(val):
+    i = int(coronalSlider.val)
+    coronalSlider.set_val(i+1)
+
+def updateFromAxialDownButton(val):
+    i = int(axialSlider.val)
+    axialSlider.set_val(i-1)
+
+def updateFromSagittalDownButton(val):
+    i = int(sagittalSlider.val)
+    sagittalSlider.set_val(i-1)
+
+def updateFromCoronalDownButton(val):
+    i = int(coronalSlider.val)
+    coronalSlider.set_val(i-1)
 
 if __name__=='__main__':
     parser = argparse.ArgumentParser()
@@ -137,16 +162,39 @@ if __name__=='__main__':
 
     # sliders for navigation
     axcolor="lavender"
-    axAxial = plt.axes([0.25, 0.15, 0.65, 0.03], facecolor=axcolor)
-    axSagittal = plt.axes([0.25, 0.10, 0.65, 0.03], facecolor=axcolor)
-    axCoronal = plt.axes([0.25, 0.05, 0.65, 0.03], facecolor=axcolor)
+    axAxial = plt.axes([0.10, 0.15, 0.65, 0.03], facecolor=axcolor)
+    axSagittal = plt.axes([0.10, 0.10, 0.65, 0.03], facecolor=axcolor)
+    axCoronal = plt.axes([0.10, 0.05, 0.65, 0.03], facecolor=axcolor)
+
     axialSlider = Slider(axAxial, 'Axial', 0, 109, valinit=55, valstep=1)
     sagittalSlider = Slider(axSagittal, 'Sagittal', 0, 511, valinit=256, valstep=1)
     coronalSlider = Slider(axCoronal, 'Coronal', 0, 511, valinit=220, valstep=1)
 
-    coronalSlider.on_changed(update)
-    sagittalSlider.on_changed(update)
-    axialSlider.on_changed(update)
+    coronalSlider.on_changed(updateFromSlider)
+    sagittalSlider.on_changed(updateFromSlider)
+    axialSlider.on_changed(updateFromSlider)
+
+    # buttons for navigation
+    axAxialUp = plt.axes([0.90, 0.15, 0.03, 0.03], facecolor=axcolor)
+    axSagittalUp = plt.axes([0.90, 0.10, 0.03, 0.03], facecolor=axcolor)
+    axCoronalUp = plt.axes([0.90, 0.05, 0.03, 0.03], facecolor=axcolor)
+    axAxialDown = plt.axes([0.95, 0.15, 0.03, 0.03], facecolor=axcolor)
+    axSagittalDown = plt.axes([0.95, 0.10, 0.03, 0.03], facecolor=axcolor)
+    axCoronalDown = plt.axes([0.95, 0.05, 0.03, 0.03], facecolor=axcolor)
+
+    axialUpButton = Button(axAxialUp, '+')
+    sagittalUpButton = Button(axSagittalUp, '+')
+    coronalUpButton = Button(axCoronalUp, '+')
+    axialDownButton = Button(axAxialDown, '-')
+    sagittalDownButton = Button(axSagittalDown, '-')
+    coronalDownButton = Button(axCoronalDown, '-')
+
+    axialUpButton.on_clicked(updateFromAxialUpButton)
+    sagittalUpButton.on_clicked(updateFromSagittalUpButton)
+    coronalUpButton.on_clicked(updateFromCoronalUpButton)
+    axialDownButton.on_clicked(updateFromAxialDownButton)
+    sagittalDownButton.on_clicked(updateFromSagittalDownButton)
+    coronalDownButton.on_clicked(updateFromCoronalDownButton)
 
     plt.show()
 
