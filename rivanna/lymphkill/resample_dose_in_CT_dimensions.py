@@ -57,7 +57,7 @@ def resample_dose(
 
 
 	xyz_d = (xyz_v * dim_voxv + corner_v - corner_d)/dim_voxd
-	xyz_d = xyz_d.astype(int)
+	# xyz_d = xyz_d.astype(int)
 
 	valid_voxel = np.logical_and(xyz_d[:,:,:,0] >= 0, xyz_d[:,:,:,1] >= 0)
 	valid_voxel = np.logical_and(valid_voxel, xyz_d[:,:,:,2] >= 0)
@@ -69,12 +69,34 @@ def resample_dose(
 	xyz_d = xyz_d[valid_voxel]
 	dose_v = np.zeros(dim_vol)
 
-	#dose_v[xyz_v] = dosegrids[xyz]
+	# Use trilinear interpolation with the nomenclature of https://en.wikipedia.org/wiki/Trilinear_interpolation
 	for (i,posv) in enumerate(xyz_v):
-		dose_v[posv[1],posv[0],posv[2]] = dose_grids[xyz_d[i][1],xyz_d[i][0],xyz_d[i][2]]
+		xd = xyz_d[i][1] % 1
+		yd = xyz_d[i][0] % 1
+		zd = xyz_d[i][2] % 1
+
+		x0 = np.clip(int(xyz_d[i][1]), 0, dim_dos[0]-1)
+		y0 = np.clip(int(xyz_d[i][0]), 0, dim_dos[1]-1)
+		z0 = np.clip(int(xyz_d[i][2]), 0, dim_dos[2]-1)
+
+		x1 = np.clip(int(xyz_d[i][1])+1, 0, dim_dos[0]-1)
+		y1 = np.clip(int(xyz_d[i][0])+1, 0, dim_dos[1]-1)
+		z1 = np.clip(int(xyz_d[i][2])+1, 0, dim_dos[2]-1)
+		
+		c00 = (1-xd)*dose_grids[x0,y0,z0] + (xd)*dose_grids[x1,y0,z0]
+		c01 = (1-xd)*dose_grids[x0,y0,z1] + (xd)*dose_grids[x1,y0,z1]
+		c10 = (1-xd)*dose_grids[x0,y1,z0] + (xd)*dose_grids[x1,y1,z0]
+		c11 = (1-xd)*dose_grids[x0,y1,z1] + (xd)*dose_grids[x1,y1,z1]
+
+		c0 = (1-yd)*c00 + c10*yd
+		c1 = (1-yd)*c01 + c11*yd
+
+		c = (1-zd)*c0 + c1*zd
+
+		dose_v[posv[1],posv[0],posv[2]] = c
 
 	return dose_v
-	
+
 '''
 Write the dose grid in NRRD format
 Parameters:
@@ -96,7 +118,7 @@ if __name__=='__main__':
 		dcm_directory = find_dicom_directory(args.directory)
 		ct_prefix = 'CT'
 		dose_prefix = 'RTDOSE'
-		
+
 		ct_infos = [pydicom.dcmread(f) for f in find_prefixed_files(dcm_directory, ct_prefix)]
 		dose_info = pydicom.dcmread(find_prefixed_file(dcm_directory, dose_prefix))
 		dose_grids = load_rtdose_files(find_prefixed_files(dcm_directory, dose_prefix))
@@ -104,7 +126,7 @@ if __name__=='__main__':
 		print(type(ex), ex)
 		print('Could not load in ct/dose info')
 		exit(0)
-	
+
 	dose = resample_dose(ct_infos, dose_info, dose_grids)
 	# dose = np.transpose(dose,(1,0,2))
 
