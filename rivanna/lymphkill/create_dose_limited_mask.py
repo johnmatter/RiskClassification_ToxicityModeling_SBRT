@@ -34,7 +34,7 @@ if __name__=='__main__':
         new_mask = new_mask * 1
 
         # Write mask to disk
-        output_filename = mask_splitext[0] + '_GT_' + str(args.dose_limit) + mask_splitext[1]
+        output_filename = mask_splitext[0] + '_GT_' + str(args.dose_limit) + 'Gy' + mask_splitext[1]
         output_filename = os.path.join(args.directory, 'masks', output_filename)
 
         nrrd.write(output_filename, new_mask)
