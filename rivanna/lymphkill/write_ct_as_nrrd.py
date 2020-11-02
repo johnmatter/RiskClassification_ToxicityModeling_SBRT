@@ -11,7 +11,7 @@ from lymphkill.file_utils import find_dicom_directory, find_prefixed_files
 '''
 Loads a participant's 3D CT
 Parameters:
-	ct_info - a list of parsed 2D CT DICOM images
+    ct_info - a list of parsed 2D CT DICOM images
 Returns:
     ct_img - the 3D CT image as an ndarray
 '''
@@ -48,16 +48,15 @@ def load_ct(ct_info):
 
     # fill 3D array with the images from the files
     for i, s in enumerate(slices):
-        img2d = s.pixel_array
+        img2d = s.RescaleIntercept + s.RescaleSlope * s.pixel_array
         ct_img[:, :, i] = img2d
 
     return ct_img
-
 '''
 Write a participant's 3D CT in NRRD format
 Parameters:
     ct_img - the 3D CT image as an ndarray
-	directory - a list of parsed 2D CT DICOM images
+    directory - a list of parsed 2D CT DICOM images
 '''
 def write_ct(ct_img, directory):
     filename = os.path.join(directory, 'ct_img.nrrd')
