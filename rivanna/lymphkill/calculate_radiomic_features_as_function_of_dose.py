@@ -63,20 +63,24 @@ if __name__=='__main__':
         mask_directory = os.path.join(args.directory, 'masks')
         mask_filename = os.path.join(mask_directory, args.mask)
         mask, hdr = nrrd.read(mask_filename)
+    except Exception as ex:
+        print(type(ex), ex)
+        print('Failed to load mask: ' + mask_filename)
+        sys.exit(1)
 
+    try:
         # Read dose
         dose_filename = os.path.join(args.directory, "dose_in_CT_dimensions.nrrd")
         dose, hdr = nrrd.read(dose_filename)
-
-        # Check if CT exists
-        image_filename = os.path.join(args.directory, args.image)
-        if not(os.path.exists(image_filename)):
-            print('CT img does not exist')
-            sys.exit(0)
-
     except Exception as ex:
         print(type(ex), ex)
-        print('Failed to load data')
+        print('Failed to load dose: ' + dose_filename)
+        sys.exit(1)
+
+    # Check if CT exists
+    image_filename = os.path.join(args.directory, args.image)
+    if not(os.path.exists(image_filename)):
+        print('CT img does not exist')
         sys.exit(1)
 
     # Create feature extractor
@@ -93,7 +97,7 @@ if __name__=='__main__':
         try:
             radiomic_features[dose_limit] = extractor.execute(image_filename, dose_mask_filename)
             radiomic_features[dose_limit]['success'] = True
-        except ValueError: 
+        except ValueError:
             print('ERROR PROCESSING DOSE LIMIT ' + str(dose_limit))
             radiomic_features[dose_limit] = {'success' : False}
 
@@ -108,11 +112,13 @@ if __name__=='__main__':
     # Save features to csv
     csv_filename = '_'.join([patient_initials, mask_name, 'radiomics.csv'])
     if args.output_directory is None:
-        csv_filename = os.path.join(args.directory, csv_filename)
+        csv_filename = os.path.join(args.directory, 'radiomics', csv_filename)
     else:
         csv_filename = os.path.join(args.output_directory, csv_filename)
 
     # We need to get a list of the header names from one of the successful iterations
+    # If non of the iterations were successful, warn user
+    fieldnames=[]
     for dose_limit in dose_range:
         if radiomic_features[dose_limit]['success'] == False:
             continue
@@ -120,8 +126,12 @@ if __name__=='__main__':
             fieldnames = list(radiomic_features[dose_limit].keys())
             break
 
-    with open(csv_filename, 'w', newline='') as csvfile:
-        writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
-        writer.writeheader()
-        for dose_limit in dose_range:
-            writer.writerow(radiomic_features[dose_limit])
+    if len(fieldnames)>0:
+        with open(csv_filename, 'w', newline='') as csvfile:
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames, extrasaction='ignore')
+            writer.writeheader()
+            for dose_limit in dose_range:
+                writer.writerow(radiomic_features[dose_limit])
+    else:
+        print('Could not write csvs because `fieldnames` is empty.')
+        print('Check to see if your mask is empty!')
