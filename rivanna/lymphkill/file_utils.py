@@ -50,13 +50,17 @@ def find_postfixed_files(directory, postfix):
 	return files
 
 '''
-Find the subdirectory containing dicom files
+Find the subdirectory containing dicom files.
+If directory itself contains dicom files, return directory.
 Parameters:
 	directory - The directory to look in
 Returns:
 	The name of the directory, or None if none was found
 '''
 def find_dicom_directory(directory):
+	for i in os.listdir(directory):
+		if i[-4:] == '.dcm':
+			return directory
 	for i in os.listdir(directory):
 		subd = os.path.join(directory, i)
 		if os.path.isdir(subd):
@@ -114,5 +118,5 @@ def implay(cube):
 		plt.imshow(cube[:, :, i])
 		plt.colorbar()
 		plt.pause(0.01)
-	
+
 	plt.ioff()
