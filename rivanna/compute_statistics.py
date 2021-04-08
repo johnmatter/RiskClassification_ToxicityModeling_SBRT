@@ -315,8 +315,25 @@ def write_to_csv(patient_organs, patient_path, write, patient_name):
 
 
 def pipeline(patient_path, patient_name):
-    with open(os.path.join(patient_path, 'masks.pickle'), 'rb') as maskfile:
-        masks = pickle.load(maskfile)
+
+    # with open(os.path.join(patient_path, 'masks.pickle'), 'rb') as maskfile:
+    #     masks = pickle.load(maskfile)
+
+    # Somehow get a list of all the mask filenames for this patient
+    mask_filenames = find_postfixed_files(os.path.join(args.directory, 'masks'), 'nrrd')
+
+    masks = []
+    for mask_filename in mask_filenames:
+        mask_name = os.path.splitext(os.path.basename(mask_filename))[0]
+
+        mask_array, hdr = nrrd.read(mask_filename)
+
+        mask_array = mask_array.astype(bool)
+
+        mask_dict = {}
+        mask_dict['Name'] = mask_name
+        mask_dict['Mask'] = mask_array
+        masks.append(mask_dict)
 
     patient_organs = get_all_organ_dfs(os.path.join(patient_path, 'csvs/'), masks)
     #get_nearby_high_doses(patient_organs)  # not used
@@ -377,15 +394,15 @@ def pipeline(patient_path, patient_name):
     return patient_organs, final_df
     
     
+if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('patient_directory', type=str)
+    args = parser.parse_args()
 
-parser = argparse.ArgumentParser()
-parser.add_argument('patient_directory', type=str)
-args = parser.parse_args()
+    print('Pipeline: patient directory', args.patient_directory)
+    patient_name = args.patient_directory.strip('/')[args.patient_directory.strip('/').rfind('/')+1:]
+    #print(patient_name)
+    pipeline(args.patient_directory, patient_name)
 
-print('Pipeline: patient directory', args.patient_directory)
-patient_name = args.patient_directory.strip('/')[args.patient_directory.strip('/').rfind('/')+1:]
-#print(patient_name)
-pipeline(args.patient_directory, patient_name)
-
-  
+      
 

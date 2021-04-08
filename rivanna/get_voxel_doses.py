@@ -60,64 +60,65 @@ def get_doses_to_organ(organmask_dict, doses, voxelsize):
 
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument("directory", type=str, help='patient directory')
-args = parser.parse_args()
-# when running this file from within the patient directory pass argument .
-# print(os.listdir(args.directory))
-dcm_directory = find_dicom_directory(args.directory)
-rtdose_files = find_prefixed_files(dcm_directory, 'RTDOSE')
-csv_directory = find_csv_directory(args.directory)
-dosegrids = load_rtdose_files(rtdose_files) 
-#print(rtdose_files[0])
+if __name__=='__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("directory", type=str, help='patient directory')
+    args = parser.parse_args()
+    # when running this file from within the patient directory pass argument .
+    # print(os.listdir(args.directory))
+    dcm_directory = find_dicom_directory(args.directory)
+    rtdose_files = find_prefixed_files(dcm_directory, 'RTDOSE')
+    csv_directory = find_csv_directory(args.directory)
+    dosegrids = load_rtdose_files(rtdose_files) 
+    #print(rtdose_files[0])
 
 
-# 'rb' = read binary
-#with open('contours.pickle', 'rb') as infile:
-#	contours = pickle.load(infile)
+    # 'rb' = read binary
+    #with open('contours.pickle', 'rb') as infile:
+    #	contours = pickle.load(infile)
 
-with open(os.path.join(args.directory, 'masks.pickle'), 'rb') as infile:
-	masks = pickle.load(infile)
+    with open(os.path.join(args.directory, 'masks.pickle'), 'rb') as infile:
+        masks = pickle.load(infile)
 
-voxelsize = get_voxel_size(rtdose_files[0])
-#voxel volume
-#dosegrids is a list of voxel doses in each file
-#print(voxelsize)
-#print(type(voxelsize))
+    voxelsize = get_voxel_size(rtdose_files[0])
+    #voxel volume
+    #dosegrids is a list of voxel doses in each file
+    #print(voxelsize)
+    #print(type(voxelsize))
 
 
-doses = np.sum(np.array(dosegrids),axis=0)
+    doses = np.sum(np.array(dosegrids),axis=0)
 
-print('shape of doses:', doses.shape)
-print('voxelsize:', voxelsize)
-failures = 0
-failure_names = []
-success = False
+    print('shape of doses:', doses.shape)
+    print('voxelsize:', voxelsize)
+    failures = 0
+    failure_names = []
+    success = False
 
-with open(os.path.join(args.directory, 'grid_shape.pickle'), 'wb') as outfile:
-	pickle.dump(doses.shape, outfile)
+    with open(os.path.join(args.directory, 'grid_shape.pickle'), 'wb') as outfile:
+        pickle.dump(doses.shape, outfile)
 
-with open(os.path.join(args.directory, 'voxelsize.pickle'), 'wb') as outfile:
-	pickle.dump(voxelsize, outfile)
+    with open(os.path.join(args.directory, 'voxelsize.pickle'), 'wb') as outfile:
+        pickle.dump(voxelsize, outfile)
 
-for mask in masks:
-	organ = mask['Name'].lower()
-	if ('heart' in organ) or ('aorta' in organ) or ('vc' in organ) or ('pa' in organ) or ('t5' in organ) or ('t10' in organ):
-		success, df = get_doses_to_organ(mask, doses, voxelsize)
-	else:
-		success = False	
+    for mask in masks:
+        organ = mask['Name'].lower()
+        if ('heart' in organ) or ('aorta' in organ) or ('vc' in organ) or ('pa' in organ) or ('t5' in organ) or ('t10' in organ):
+            success, df = get_doses_to_organ(mask, doses, voxelsize)
+        else:
+            success = False	
 
-	if success:
-		filename = organ + 'doses.csv'
-		print('SUCCESS:', filename)
-		df.to_csv(os.path.join(csv_directory, filename))
-	else:
-		failures += 1
-		failure_names.append(organ)
+        if success:
+            filename = organ + 'doses.csv'
+            print('SUCCESS:', filename)
+            df.to_csv(os.path.join(csv_directory, filename))
+        else:
+            failures += 1
+            failure_names.append(organ)
 
-print('Number of Failures:', failures)
-for organ in failure_names:
-	print(organ, 'Failed')
+    print('Number of Failures:', failures)
+    for organ in failure_names:
+        print(organ, 'Failed')
 
 
 

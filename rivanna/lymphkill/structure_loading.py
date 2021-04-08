@@ -54,7 +54,7 @@ def build_affine_transformation(headers):
 		[F[1, 0] * dr, F[1, 1] * dc, k[1], T1[1]],
 		[F[2, 0] * dr, F[2, 1] * dc, k[2], T1[2]],
 		[0, 0, 0, 1]])
-	
+
 	return A
 
 '''
@@ -76,14 +76,14 @@ def read_structures(rtstruct, imageheaders):
 
 	nrois = len(roi_contour_sequence)
 	contours = {
-		'ROIName': [None] * nrois, 
-		'Points': [None] * nrois, 
-		'VoxPoints': [None] * nrois, 
+		'ROIName': [None] * nrois,
+		'Points': [None] * nrois,
+		'VoxPoints': [None] * nrois,
 		'Segmentation': [None] * nrois
 	}
 
 	for i in range(nrois):
-		template = np.zeros([imageheaders[0].Columns, imageheaders[1].Rows, len(imageheaders)], 
+		template = np.zeros([imageheaders[0].Columns, imageheaders[1].Rows, len(imageheaders)],
 							dtype=bool)
 		roi_contour = roi_contour_sequence[i]
 		roi_number = roi_contour.ReferencedROINumber
@@ -117,7 +117,7 @@ def read_structures(rtstruct, imageheaders):
 
 					minvox[2] = round(start[2])
 					maxvox[2] = round(start[2])
-				
+
 					minvox = minvox.astype(int)
 					maxvox = maxvox.astype(int)
 
@@ -129,13 +129,13 @@ def read_structures(rtstruct, imageheaders):
 					points = np.matmul(
 						xfm,
 						np.array([x.flatten(), y.flatten(), z.flatten(), np.ones(x.size)]))
-						
+
 					#Make binary image
 					segpath = Path(segments[j][:, :2])
 					inpoly = segpath.contains_points(points[:2].transpose())
 					inpoly = inpoly.reshape(x.shape)
 					inpoly = np.transpose(inpoly, (1, 0, 2))
-					contours['Segmentation'][i][minvox[0]:maxvox[0]+1, minvox[1]:maxvox[1]+1, minvox[2]:maxvox[2]+1] = inpoly 
+					contours['Segmentation'][i][minvox[0]:maxvox[0]+1, minvox[1]:maxvox[1]+1, minvox[2]:maxvox[2]+1] = inpoly
 
 			contours['Points'][i] = np.vstack(segments)
 			d4p = np.ones([contours['Points'][i].shape[0], 4])
@@ -170,18 +170,26 @@ def load_structures(directory, struct_prefix='RTSTRUCT'):
 	print('Loading in contours')
 	contours = read_structures(rtstruct, imageheaders)
 
-	return contours 
+	return contours
 
 
 if __name__=='__main__':
-	parser = argparse.ArgumentParser()
+	parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 	parser.add_argument('directory', type=str, help='The patient directory to look in')
+	parser.add_argument('--prefix', type=str, default='RTSTRUCT', help='optional prefix for structure set dcm')
+	parser.add_argument('--output', type=str, help='Output directory for masks')
 	args = parser.parse_args()
 
+	# Where are we writing the masks?
+	if args.output is None:
+		output_directory = os.path.join(args.directory)
+	else:
+		output_directory = args.output
+
 	directory = find_dicom_directory(args.directory)
-	contours = load_structures(directory)
+	contours = load_structures(directory, args.prefix)
 	for i in contours['ROIName']:
 		print(i)
-	outfile = open(os.path.join(args.directory, 'contours.pickle'), 'wb')
+	outfile = open(os.path.join(output_directory, 'contours.pickle'), 'wb')
 	pickle.dump(contours, outfile)
 	outfile.close()
