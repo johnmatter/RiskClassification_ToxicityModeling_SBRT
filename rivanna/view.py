@@ -53,11 +53,10 @@ def redraw(i,j,k):
         axs[3].imshow(dose[:, j, :], cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha)
         axs[6].imshow(dose[k, :, :].T, cmap=dose_cmap, vmin=dose_minv, vmax=dose_maxv, alpha=dose_alpha, origin='lower')
 
-        # This will use the range in this slice to set max/min for the colormap
+        # # This will use the range in this slice to set max/min for the colormap
         # axs[2].imshow(dose[:, :, i], cmap=dose_cmap, alpha=dose_alpha)
         # axs[3].imshow(dose[:, j, :], cmap=dose_cmap, alpha=dose_alpha)
         # axs[6].imshow(dose[k, :, :].T, cmap=dose_cmap, alpha=dose_alpha, origin='lower')
-
 
     axs[0].set_aspect(1.171875/1.171875)
     axs[1].set_aspect(1.171875/3.000000)
@@ -102,9 +101,11 @@ if __name__=='__main__':
     parser.add_argument('--dose', type=str, help='dose filename')
     parser.add_argument('--masks', type=str, help='mask filename', nargs='*')
     parser.add_argument('--dose_cmap', type=str, help='colormap to use for dose')
-    parser.add_argument('--dose_alpha', type=str, help='dose alpha')
-    parser.add_argument('--mask_alpha', type=str, help='mask alpha')
+    parser.add_argument('--dose_alpha', type=float, help='dose alpha')
+    parser.add_argument('--mask_alpha', type=float, help='mask alpha')
     args = parser.parse_args()
+
+    plt.style.use('dark_background')
 
     if args.dose_cmap is not None:
         dose_cmap = args.dose_cmap
@@ -125,11 +126,16 @@ if __name__=='__main__':
     ct_minv = ct.min()
     ct_maxv = ct.max()
 
+    # Calculate central coordinate in CT for initializing display
+    axialMidpoint = int(np.floor(ct.shape[2]/2))
+    sagittalMidpoint = int(np.floor(ct.shape[0]/2))
+    coronalMidpoint = int(np.floor(ct.shape[1]/2))
+
     if args.dose is not None:
         dose, dose_header = nrrd.read(args.dose)
         dose_minv = np.min(dose[np.nonzero(dose)])
         dose_maxv = dose.max()
-        # # Mask all the voxels with zero dose
+
         # dose_cmap = copy.copy(plt.cm.get_cmap(dose_cmap))
         # dose_cmap.set_bad(alpha=0)
         # dose = np.ma.masked_where(dose<dose_minv, dose)
@@ -140,7 +146,7 @@ if __name__=='__main__':
     # I multiply it by the length of the mask list.
     if args.masks is not None:
         # This will hide all the voxels equal to zero in each mask
-        mask_cmap = copy.copy(plt.cm.get_cmap('Set3'))
+        mask_cmap = copy.copy(plt.cm.get_cmap('Set1').reversed())
         mask_cmap.set_bad(alpha=0)
 
         masks = []
@@ -158,7 +164,7 @@ if __name__=='__main__':
     axs[5].axis('off')
     axs[7].axis('off')
 
-    redraw(55,256,220)
+    redraw(axialMidpoint, sagittalMidpoint, coronalMidpoint)
 
     # sliders for navigation
     axcolor="lavender"
@@ -166,9 +172,9 @@ if __name__=='__main__':
     axSagittal = plt.axes([0.10, 0.10, 0.65, 0.03], facecolor=axcolor)
     axCoronal = plt.axes([0.10, 0.05, 0.65, 0.03], facecolor=axcolor)
 
-    axialSlider = Slider(axAxial, 'Axial', 0, 109, valinit=55, valstep=1)
-    sagittalSlider = Slider(axSagittal, 'Sagittal', 0, 511, valinit=256, valstep=1)
-    coronalSlider = Slider(axCoronal, 'Coronal', 0, 511, valinit=220, valstep=1)
+    axialSlider = Slider(axAxial, 'Axial', 0, ct.shape[2]-1, valinit=axialMidpoint, valstep=1)
+    sagittalSlider = Slider(axSagittal, 'Sagittal', 0, ct.shape[0]-1, valinit=sagittalMidpoint, valstep=1)
+    coronalSlider = Slider(axCoronal, 'Coronal', 0, ct.shape[1]-1, valinit=coronalMidpoint, valstep=1)
 
     coronalSlider.on_changed(updateFromSlider)
     sagittalSlider.on_changed(updateFromSlider)
