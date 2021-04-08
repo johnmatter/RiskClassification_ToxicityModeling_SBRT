@@ -2,6 +2,7 @@ import os
 import argparse
 from sys import exit
 import numpy as np
+import datetime
 import pickle
 import pydicom
 import nrrd
@@ -71,6 +72,9 @@ def resample_dose(
 
 	# Use trilinear interpolation with the nomenclature of https://en.wikipedia.org/wiki/Trilinear_interpolation
 	for (i,posv) in enumerate(xyz_v):
+		if ( (i%1e6) == 0):
+			timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+			print('%09d / %09d : %0.1f %% @ %s' % (i, xyz_v.shape[0], 100*(i/xyz_v.shape[0]), timestamp) )
 		xd = xyz_d[i][1] % 1
 		yd = xyz_d[i][0] % 1
 		zd = xyz_d[i][2] % 1
@@ -112,16 +116,23 @@ def write_dose(dose, directory):
 if __name__=='__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('directory', type=str, help='The patient directory to look in')
+	parser.add_argument('--dose_prefix', type=str, default='RTDOSE', help='optional prefix for dose dcm')
+	parser.add_argument('--output', type=str, help='Output directory for masks')
 	args = parser.parse_args()
+
+	# Where are we writing the dose?
+	if args.output is None:
+		dose_directory = args.directory
+	else:
+		dose_directory = args.output
 
 	try:
 		dcm_directory = find_dicom_directory(args.directory)
 		ct_prefix = 'CT'
-		dose_prefix = 'RTDOSE'
 
 		ct_infos = [pydicom.dcmread(f) for f in find_prefixed_files(dcm_directory, ct_prefix)]
-		dose_info = pydicom.dcmread(find_prefixed_file(dcm_directory, dose_prefix))
-		dose_grids = load_rtdose_files(find_prefixed_files(dcm_directory, dose_prefix))
+		dose_info = pydicom.dcmread(find_prefixed_file(dcm_directory, args.dose_prefix))
+		dose_grids = load_rtdose_files(find_prefixed_files(dcm_directory, args.dose_prefix))
 	except Exception as ex:
 		print(type(ex), ex)
 		print('Could not load in ct/dose info')
@@ -130,4 +141,4 @@ if __name__=='__main__':
 	dose = resample_dose(ct_infos, dose_info, dose_grids)
 	# dose = np.transpose(dose,(1,0,2))
 
-	write_dose(dose, args.directory)
+	write_dose(dose, dose_directory)
