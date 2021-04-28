@@ -100,8 +100,10 @@ def write_mask(mask, directory):
 	# Generate filename
 	filename = os.path.join(directory, mask['Name']+'.nrrd')
 
-	# Remove spaces from filename
+	# Remove trouble characters from filename
 	filename = filename.replace(' ', '_')
+	filename = filename.replace('(', '')
+	filename = filename.replace(')', '')
 
 	print('Writing ' + filename)
 	nrrd.write(filename, 1*mask['Mask'])
