@@ -117,7 +117,7 @@ if __name__=='__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('directory', type=str, help='The patient directory to look in')
 	parser.add_argument('--dose_prefix', type=str, default='RTDOSE', help='optional prefix for dose dcm')
-	parser.add_argument('--output', type=str, help='Output directory for masks')
+	parser.add_argument('--output', type=str, help='Output directory for dose')
 	args = parser.parse_args()
 
 	# Where are we writing the dose?
