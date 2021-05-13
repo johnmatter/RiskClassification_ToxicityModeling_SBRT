@@ -9,43 +9,52 @@ from scipy import ndimage
 from sys import exit
 from lymphkill.file_utils import find_prefixed_file, find_dicom_directory, implay, find_prefixed_files
 
+# # ROI names that DC has been using for his contours
+# Aorta
+# Aorta_Ring_Inside3.00mm
+# Atrium_L
+# Atrium_R
+# heart
+# IVC
+# PulmArt
+# Septum
+# SVC
+# Ventricle_L
+# Ventricle_R
+
+
 basic_mask_dicts = [
-	{'NameStrings': ['other', 'organs'], 'GV': False, 'Stationary': False, 'CardiacOutput': -1},
-	{'NameStrings': ['lung', 'total'], 'GV': False, 'Stationary': False, 'CardiacOutput': 0.025},
-	{'NameStrings': ['aorta'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
-	{'NameStrings': ['pa'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
-	{'NameStrings': ['vc'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
-	{'NameStrings': ['thoracic', 'spine'], 'GV': False, 'Stationary': True, 'CardiacOutput': 0.},
-	{'NameStrings': ['Heart'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['Heart','AV'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['pa','av'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['vc', 'av'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['aorta', 'av'], 'GV':True, 'Stationary':False,'CardiacOutput':1.},
-	{'NameStrings': ['Great','Vessels'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
-	{'NameStrings': ['Chestwall'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
-	{'NameStrings': ['Lung','Lt'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.012},
-	{'NameStrings': ['Lung','Rt'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.012},
-	{'NameStrings': ['cord'], 'GV':False, 'Stationary': True, 'CardiacOutput':0.},
-	{'NameStrings': ['brachial', 'plexus'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
-	{'NameStrings': ['T10'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
-	{'NameStrings': ['T5'], 'GV':False, 'Stationary': False, 'CardiacOutput':0.},
+	{'NameStrings': ['aorta'], 'InvalidNStrings' : ['ring', 'blood'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['aorta', 'blood'], 'InvalidNStrings' : ['ring'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['aorta', 'ring'], 'InvalidNStrings' : ['blood'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['heart'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['ivc'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['svc'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['ventricle_l'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['ventricle_r'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['pulmonary','artery'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
+	{'NameStrings': ['septum'], 'GV': True, 'Stationary': False, 'CardiacOutput': 1.},
 ]
 
 '''
 Find the index for a given organ in the contours structure
 Parameters:
 	contours - The contours structure to look in
-	name_strings - A list of strings which must appear in the name (lowercase)
+	dct - A dictionary descrbing the mask, such as basic_mask_dicts
 Returns:
 	The index of the matching contour in the structure
 '''
-def find_matching_contour_idx(contours, name_strings):
+def find_matching_contour_idx(contours, dct):
 	for i, nm in enumerate(contours['ROIName']):
 		lnm = nm.lower()
 		found = True
-		for j in name_strings:
+		for j in dct['NameStrings']:
 			if not j.lower() in lnm:
 				found = False
+		if 'InvalidNStrings' in dct:
+			for k in dct['InvalidNStrings']:
+				if k.lower() in lnm:
+					found = False
 		if found:
 			return i
 
@@ -140,17 +149,13 @@ def mask_generation(
 	for i, dct in enumerate(mask_dicts):
 		print('dct', dct['NameStrings'])
 
-		contour_idx = find_matching_contour_idx(contours, dct['NameStrings'])
+		contour_idx = find_matching_contour_idx(contours, dct)
 		if contour_idx < 0:
 			z += 1
 			continue
 
 		mdict = {}
 		mdict['Name'] = contours['ROIName'][contour_idx]
-		if 'heart' in dct['NameStrings']:
-			print('HERE IS THE HEART')
-			print(mdict['Name'])
-			print(contour_idx)
 		mdict['GV'] = dct['GV']
 		mdict['Stationary'] = dct['Stationary']
 		mdict['CardiacOutput'] = dct['CardiacOutput']
@@ -162,23 +167,22 @@ def mask_generation(
 		mdict['Mask'] = np.fliplr(mdict['Mask'])
 
 		mdict['LayerSize'] = layer_size(mdict['Mask'])
-		print('len bef', len(masks))
 		masks.append(mdict)
-		print('HERE is mdict', mdict['Name'])
-		print('i:', i)
-		print('len', len(masks))
-		if masks[i-z]['CardiacOutput'] == -1:
-			other_organs_ind = i
-		else:
-			if used_voxels is None:
-				used_voxels = np.copy(masks[i-z]['Mask'])
-			else:
-				used_voxels = np.logical_or(used_voxels, masks[i-z]['Mask'])
 
-	#Now remove duplicated voxels in other organs
-	if other_organs_ind != -1:
-		masks[other_organs_ind]['Mask'] = np.logical_and(
-			masks[other_organs_ind]['Mask'], np.logical_not(used_voxels))
+        # # Keeping this for now, in case we want to make the "other organs" mask in the future
+		# if masks[i-z]['CardiacOutput'] == -1:
+			# other_organs_ind = i
+		# else:
+			# if used_voxels is None:
+				# used_voxels = np.copy(masks[i-z]['Mask'])
+			# else:
+				# used_voxels = np.logical_or(used_voxels, masks[i-z]['Mask'])
+
+    # Keeping this for now, in case we want to make the "other organs" mask in the future
+	##Now remove duplicated voxels in other organs
+	#if other_organs_ind != -1:
+	#	masks[other_organs_ind]['Mask'] = np.logical_and(
+	#		masks[other_organs_ind]['Mask'], np.logical_not(used_voxels))
 
 	return masks
 
@@ -196,24 +200,9 @@ if __name__=='__main__':
 	else:
 		mask_directory = args.output
 
-	# Load the conouts.pickle file generated by structure_loading.py
+	# Load the contouss.pickle file generated by structure_loading.py
 	with open(os.path.join(args.directory, 'contours.pickle'), 'rb') as infile:
 		contours = pickle.load(infile)
-
-	# Remove any masks we don't want
-	for i, nm in enumerate(contours['ROIName']):
-		if nm == 'T10_POI_1' or nm == 'HeartMax_POI':
-			contours['ROIName'].pop(i)
-
-	# Generate mask_dicts containing EVERY contour in contours.pickle
-	mask_dicts = []
-	for roi in contours['ROIName']:
-		mdict = {}
-		mdict['NameStrings'] = roi
-		mdict['GV'] = False
-		mdict['Stationary'] = False
-		mdict['CardiacOutput'] = -1
-		mask_dicts.append(mdict)
 
 	# Load CT info
 	try:
@@ -226,7 +215,7 @@ if __name__=='__main__':
 		exit(0)
 
 	# Generate masks
-	masks = mask_generation(contours, ct_infos, mask_dicts)
+	masks = mask_generation(contours, ct_infos, basic_mask_dicts)
 
 	# I'm commenting this paragraph out for now, because we're low on space on Rivanna
 	# and I'm not currently using the pickle files.
