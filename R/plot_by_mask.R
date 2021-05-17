@@ -1,3 +1,5 @@
+output_dir <- "/Users/matter/Desktop/radiomics_delta_20210514"
+
 feature_sets <- c("glcm", "gldm", "glrlm", "glszm", "ngtdm")
 
 plots <- hash()
@@ -32,16 +34,16 @@ for(feature_set in feature_sets) {
 }
 
 
-# for(feature_set in feature_sets) {
-#     for(m in unique(d_delta$mask)) {
-#         this_title    <- paste(m, toupper(feature_set))
-#         this_filename <- paste0(m, "_", toupper(feature_set), ".pdf")
-#         this_key      <- paste(m, feature_set)
-#         p <- grid.arrange(grobs=plots[[this_key]],
-#                           ncol=5,
-#                           nrow=5,
-#                           top=textGrob(this_title, gp=gpar(fontsize=20))
-#                          )
-#         ggsave(plot=p, filename=this_filename, width=14, height=10)
-#     }
-# }
+for(feature_set in feature_sets) {
+    for(m in unique(d_delta$mask)) {
+        this_title    <- paste(m, toupper(feature_set))
+        this_filename <- paste0(output_dir, m, "_", toupper(feature_set), ".pdf")
+        this_key      <- paste(m, feature_set)
+        p <- grid.arrange(grobs=plots[[this_key]],
+                          ncol=5,
+                          nrow=5,
+                          top=textGrob(this_title, gp=gpar(fontsize=20))
+                         )
+        ggsave(plot=p, filename=this_filename, width=14, height=10)
+    }
+}

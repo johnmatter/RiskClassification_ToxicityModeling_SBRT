@@ -1,5 +1,5 @@
-patient_dir <- "/Volumes/ssd750/radiomics/patients/contrast"
-patients <- c("BE", "PP", "LJ")
+patient_dir <- "/Volumes/ssd750/radiomics/patients/contrast_from_scratch"
+patients <- c("MB", "LJ", "WJ", "HI")
 
 # Load csvs
 d <- data.frame()
@@ -18,10 +18,11 @@ for(patient in patients) {
 d <- d %>% select(-contains("diagnostics_"))
 
 # tolower() all mask names; some patients have e.g. Heart.nrrd and others, heart.nrrd
-d$mask <- tolower(d$mask)
+# alsoo remove ".nrrd"
+d$mask <- as.factor(tolower(sub(".nrrd","",d$mask)))
 
 # limit to pulmonary structures of interest
-masks_filter <- c("heart.nrrd", "aorta.nrrd", "pulmart.nrrd", "ivc.nrrd", "svc.nrrd")
+masks_filter <- c("aorta", "aorta_blood", "aorta_wall_jm")
 d <- d %>% filter(mask %in% masks_filter)
 
 # get names of radiomic features
@@ -36,8 +37,7 @@ radiomic_features <- radiomic_features[-contains("shape",vars=radiomic_features)
 d_delta <- data.frame(patient=character(), mask=character(), dose_bin=character())
 for(feature in radiomic_features) {
     eval_str <- "d_feature_delta <- d %>% group_by(patient, mask, dose_bin)"
-    eval_str <- sprintf("%s %%>%% mutate(delta=%s[timepoint=='Post1']-%s[timepoint=='Pre'])", eval_str, feature, feature)
-    eval_str <- sprintf("%s %%>%% filter(timepoint=='Post1') %%>%% select(patient,mask,dose_bin,delta)", eval_str)
+    eval_str <- sprintf("%s %%>%% summarize(delta=%s[timepoint=='Post1']-%s[timepoint=='Pre'], .groups='keep')", eval_str, feature, feature)
     eval_str <- sprintf("%s %%>%% rename(%s=delta)", eval_str, feature)
     eval(parse(text=eval_str))
 
