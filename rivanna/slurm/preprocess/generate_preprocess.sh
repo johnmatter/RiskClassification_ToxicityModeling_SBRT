@@ -1,5 +1,5 @@
 #!/bin/bash
-patients=(WJ HI MB LJ)
+patients=(WJ HI MB LJ BE)
 timepoints=(Pre Post1)
 patients_dir=/scratch/jcm6fv/PrePost
 

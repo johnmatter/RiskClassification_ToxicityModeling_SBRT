@@ -18,10 +18,10 @@ module load mvapich2/2.3.1
 module load openmpi/3.1.4
 module load python/3.6.6
 
-patients_dir=/scratch/jcm6fv/PrePost
+patients_dir=/nv/vol141/phys_nrf/JohnMatter/patients/post_and_pre
 patient=PATIENTDIR
 
-cd /scratch/jcm6fv/
+cd /nv/vol141/phys_nrf/JohnMatter/RiskClassification_ToxicityModeling_SBRT/
 source virtual_environment/bin/activate
 
 cd RiskClassification_ToxicityModeling_SBRT/rivanna
