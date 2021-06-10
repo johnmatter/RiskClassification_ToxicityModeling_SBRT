@@ -91,7 +91,7 @@ def read_structures(rtstruct, imageheaders):
 		contours['ROIName'][i] = roi_structureset.ROIName
 		contours['Segmentation'][i] = template
 
-		print(contours['ROIName'][i])
+		# print(contours['ROIName'][i])
 
 		try:
 			contour_sequence = roi_contour.ContourSequence
