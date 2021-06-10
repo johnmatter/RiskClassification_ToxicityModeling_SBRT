@@ -22,8 +22,11 @@ d <- d %>% select(-contains("diagnostics_"))
 d$mask <- as.factor(tolower(sub(".nrrd","",d$mask)))
 
 # limit to pulmonary structures of interest
-masks_filter <- c("aorta", "aorta_blood", "aorta_wall_jm")
+masks_filter <- c("aorta", "aorta_-_shrink__1.00mm", "aorta_blood", "aorta_wall_jm")
 d <- d %>% filter(mask %in% masks_filter)
+
+# rename
+d <- transform(d, mask=revalue(mask,c("aorta_-_shrink__1.00mm"="aorta_shrink_1mm")))
 
 # get names of radiomic features
 radiomic_features <- names(d)
